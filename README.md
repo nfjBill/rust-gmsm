@@ -6,7 +6,7 @@ gmsm is an open source pure rust library of China Cryptographic Algorithm Standa
 
 * SM2 (In the writing...)
 * SM3 (GM/T 0004-2012): cryptographic hash function with 256-bit digest length.
-* SM2 (In the writing...)
+* SM4 (In the writing...)
 
 ## Documents
 
