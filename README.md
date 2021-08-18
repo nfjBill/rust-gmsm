@@ -13,11 +13,15 @@ gmsm is an open source pure rust library of China Cryptographic Algorithm Standa
 * SM3
 
 ```rust
+use gmsm::sm3::sm3_hex;
 
-let hash_str = sm3_hex("abc");
+fn main() {
+    let s = sm3_hex("abc");
 
-// hex_str is "66C7F0F462EEEDD9D1F2D46BDC10E4E24167C4875CF2F7A2297DA02B8F4BA8E0";
+    println!("{}", s)
+}
 
+// "66C7F0F462EEEDD9D1F2D46BDC10E4E24167C4875CF2F7A2297DA02B8F4BA8E0";
 ```
 
 ## License
