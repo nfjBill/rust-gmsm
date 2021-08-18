@@ -1,23 +1,3 @@
-use std::fmt;
-
-struct SliceDisplay<'a, T: 'a>(&'a [T]);
-
-impl<'a, T: fmt::Display + 'a> fmt::Display for SliceDisplay<'a, T> {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let mut first = true;
-        for item in self.0 {
-            if !first {
-                write!(f, ", {}", item)?;
-            } else {
-                write!(f, "{}", item)?;
-            }
-            first = false;
-        }
-        Ok(())
-    }
-}
-// fn left_rotate(x: u32, r: u32) -> u32 { x << (r % 32) | x >> (32 - r % 32) }
-
 fn ff0(x: u32, y: u32, z: u32) -> u32 { x ^ y ^ z }
 
 fn ff1(x: u32, y: u32, z: u32) -> u32 { (x & y) | (x & z) | (y & z) }
@@ -101,18 +81,14 @@ pub fn c_f(mut v: [u32; 8], b_msg: [u32; 16]) -> [u32; 8] {
 
     while j < 16 {
         let jj = j;
-        // let ss1 = (a.rotate_left(12) + e + 0x79cc4519u32.rotate_left(jj)).rotate_left(7);
         let ss1 = a
             .rotate_left(12)
             .wrapping_add(e)
             .wrapping_add(0x79cc_4519u32.rotate_left(jj as u32))
             .rotate_left(7);
-        // let ss1 = left_rotate(left_rotate(a, 12) + e + left_rotate(0x79cc4519, jj as u32), 7);
-        // let ss1 = left_rotate(left_rotate(a, 12) + e + left_rotate(0x79cc4519, jj as u32), 7);
 
         let ss2 = ss1 ^ a.rotate_left(12);
-        // let tt1 = ff0(a, b, c) + d + ss2 + wtmp.w2[j as usize];
-        // let tt2 = gg0(e, f, g) + h + ss1 + wtmp.w1[j as usize];
+
         let tt1 = ff0(a, b, c)
             .wrapping_add(d)
             .wrapping_add(ss2)
@@ -142,8 +118,6 @@ pub fn c_f(mut v: [u32; 8], b_msg: [u32; 16]) -> [u32; 8] {
             jj = j - 32;
         }
 
-        // let ss1 = (a.rotate_left(12) + e + 0x7a879d8au32.rotate_left(jj)).rotate_left(7);
-        // let ss1 = left_rotate(left_rotate(a, 12) + e + left_rotate(0x7a879d8a, jj as u32), 7);
         let ss1 = a
             .rotate_left(12)
             .wrapping_add(e)
@@ -151,13 +125,6 @@ pub fn c_f(mut v: [u32; 8], b_msg: [u32; 16]) -> [u32; 8] {
             .rotate_left(7);
 
         let ss2 = ss1 ^ (a.rotate_left(12));
-       // let aa = a.rotate_left(12)+e+0x7a87_9d8au32.rotate_left(jj as u32);
-       //  let ss1 = aa.rotate_left(7);
-       //  let ss2 = ss1 ^ (a.rotate_left(12));
-
-
-        // let tt1 = ff1(a, b, c) + d + ss2 + wtmp.w2[j as usize];
-        // let tt2 = gg1(e, f, g) + h + ss1 + wtmp.w1[j as usize];
 
         let tt1 = ff1(a, b, c)
             .wrapping_add(d)
@@ -191,33 +158,3 @@ pub fn c_f(mut v: [u32; 8], b_msg: [u32; 16]) -> [u32; 8] {
 
     v
 }
-
-// pub fn block(dig: &mut Digest, q: &[u8]) {
-//     let mut p = q;
-//     let mut v: [u32; 8] = [0; 8];
-//     let mut i = 0;
-//     while i < 8 {
-//         v[i] = dig.h[i];
-//         i += 1;
-//     }
-//     while p.len() >= 64 {
-//         let mut m: [u32; 16] = [0; 16];
-//         let x = &p[..64];
-//         let mut xi = 0;
-//         let mut mi = 0;
-//
-//         while mi < 16 {
-//             m[mi] = x[xi + 3] as u32 |
-//                 ((x[xi + 2] as u32) << 8) |
-//                 ((x[xi + 1] as u32) << 16) |
-//                 ((x[xi] as u32) << 24);
-//             mi += 1;
-//             xi += 4;
-//         }
-//         p = &p[64..];
-//     }
-//     i = 0;
-//     while i < 8 {
-//         dig.h[i] = v[i];
-//     }
-// }
