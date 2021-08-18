@@ -1,6 +1,6 @@
 [package]
 name = "gmsm"
-version = "0.0.3"
+version = "0.0.4"
 edition = "2018"
 authors = ["nfjbill <nfjbill@qq.com>"]
 description = "A Rust Library of China's Standards of Encryption Algorithms (SM2/3/4)"
@@ -9,8 +9,5 @@ license = "Apache-2.0"
 repository = "https://github.com/nfjBill/rust-gmsm"
 readme = "README.md"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
 [dependencies]
 hex = "0.3"
-#hex = {version = "0.3", default-features = false, optional = true}
