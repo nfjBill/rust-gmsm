@@ -1,6 +1,6 @@
-# Libsm
+# gmsm
 
-Libsm is an open source pure rust library of China Cryptographic Algorithm Standards.
+gmsm is an open source pure rust library of China Cryptographic Algorithm Standards.
 
 ## GM/T Algorithms
 
