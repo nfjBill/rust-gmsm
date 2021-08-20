@@ -26,7 +26,7 @@ fn main() {
 * SM4
 
 ```rust
-use gmsm::sm3::{sm4_ecb_encrypt_hex, sm4_ecb_decrypt_hex, sm4_cbc_encrypt_hex, sm4_cbc_decrypt_hex};
+use gmsm::sm4::{sm4_ecb_encrypt_hex, sm4_ecb_decrypt_hex, sm4_cbc_encrypt_hex, sm4_cbc_decrypt_hex};
 
 fn main() {
     let key = "8A3F8665AAEE6F7A0CB8F40B971E3373";
