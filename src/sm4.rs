@@ -1,5 +1,4 @@
 use crate::g4::cipher::{sm4_ecb, sm4_cbc};
-use crate::utils::slice::{SliceDisplay};
 
 // ecb encrypt
 
