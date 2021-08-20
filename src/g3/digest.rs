@@ -1,4 +1,5 @@
 use crate::g3::hash::c_f;
+use crate::utils::slice::copy_slice;
 
 pub const SIZE: usize = 32;
 
@@ -139,13 +140,4 @@ impl Digest {
 
         return digest;
     }
-}
-
-pub fn copy_slice(dst: &mut [u8], src: &[u8]) -> usize {
-    let mut c = 0;
-    for (d, s) in dst.iter_mut().zip(src.iter()) {
-        *d = *s;
-        c += 1;
-    }
-    c
 }
