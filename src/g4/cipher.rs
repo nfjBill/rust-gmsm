@@ -8,11 +8,6 @@ fn sc_sbox(ins: u8) -> u8 {
     return SBOX[x][y];
 }
 
-//linear transformation L，C=L(B)=B^(B<<<2)^(B<<<10)^(B<<<18)^(B<<<24)
-// fn l(ins: u32) -> u32 {
-//     ins ^ ins.rotate_left(2) ^ ins.rotate_left(10) ^ ins.rotate_left(18) ^ ins.rotate_left(24)
-// }
-
 //linear transformation L'，C=L'(B)=B^(B<<<13)^(B<<<23)
 fn key_l(ins: u32) -> u32 {
     ins ^ ins.rotate_left(13) ^ ins.rotate_left(23)
@@ -155,15 +150,6 @@ pub fn new_cipher(key: &[u8]) -> Block {
 fn repeat(b: &[u8], count: usize) -> Vec<u8> {
     let bl: usize = b.len();
 
-    // if count == 0 {
-    //     [BL; 0]
-    // }
-
-    // if count < 0 {
-    //     panic!("bytes: negative Repeat count")
-    // } else if bl * count / count != bl {
-    //     panic!("bytes: Repeat count causes overflow")
-    // }
     let mut nb: Vec<u8> = vec![0; bl*count];
     let mut bp = copy_slice(&mut nb, &b);
     while bp < nb.len() {
@@ -187,10 +173,6 @@ fn pkcs7_un_padding(src: Vec<u8>) -> Vec<u8> {
     let length = src.len();
     let unpadding = src[length - 1] as u32;
 
-    // if unpadding > BLOCKSIZE as u32 || unpadding == 0 {
-    //     panic!("Invalid pkcs7 padding (unpadding > BlockSize || unpadding == 0)");
-    // }
-
     let pad = &src[(src.len() - unpadding as usize)..];
 
     for i in 0..unpadding {
@@ -199,12 +181,6 @@ fn pkcs7_un_padding(src: Vec<u8>) -> Vec<u8> {
         }
     }
 
-    // while i < unpadding {
-    //     if pad[i] != unpadding as u32 {
-    //         panic!("Invalid pkcs7 padding (pad[i] != unpadding)");
-    //     }
-    //     i += 1
-    // }
     Vec::from(&src[..(length - unpadding as usize)])
 }
 
