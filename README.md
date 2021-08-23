@@ -8,6 +8,15 @@ gmsm is an open source pure rust library of China Cryptographic Algorithm Standa
 * SM3 (GM/T 0004-2012): cryptographic hash function with 256-bit digest length.
 * SM4 (GM/T 0002-2012): block cipher with 128-bit key length and 128-bit block size, also named SMS4.
 
+## Usage
+
+Add this to your `Cargo.toml`:
+
+```toml
+[dependencies]
+gmsm = "0.1"
+```
+
 ## Documents
 
 * SM3
