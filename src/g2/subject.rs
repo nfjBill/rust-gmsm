@@ -36,9 +36,6 @@ pub fn generate_key() -> PrivateKey {
     k = k.add(ONE.clone());
     let k_bytes = k.to_bytes_be();
     let (x, y) = c.scalar_base_mult(k_bytes);
-    // let x = BigUint::from_str("106232436169132275020063792326403348975150919484913616784921093913122562537616").unwrap();
-    // let y = BigUint::from_str("11773149012160196139417803285138075847025647624416340549715874084457315617910").unwrap();
-    // println!("{} {}", x, y);
     PrivateKey {
         curve: params.clone(),
         public_key: PublicKey { x, y },
@@ -99,8 +96,6 @@ pub fn bytes_to_public_key(bytes: Vec<u8>) -> PublicKey {
 }
 
 fn rand_field_element() -> BigUint {
-    // let sm2_p256 = Sm2P256Curve::new();
-    // let params = sm2_p256.params();
     let b: Vec<u8> = (0..BITSIZE / 8 + 8).map(|_| { rand::random::<u8>() }).collect();
     // fix random
     // let b = hex::decode("eb8ba241ff968e1ff212ee55eed16e08cf4e4047325fe0907e8d555a4640a3e1917a6f6de2aaca17").unwrap();
@@ -182,8 +177,6 @@ pub fn encrypt(pub_key: PublicKey, data: Vec<u8>, mode: usize) -> Vec<u8> {
         let mut y1buf = y1.to_bytes_be();
         let mut x2buf = x2.to_bytes_be();
         let mut y2buf = y2.to_bytes_be();
-        // println!("{:?} {:?} {:?} {:?}", x1buf, y1buf, x2buf, y2buf);
-        // -
 
         let mut n = x1buf.len();
         if n < 32 {
