@@ -26,31 +26,46 @@ pub fn sm2_generate_key_hex() -> Keypair {
     }
 }
 
-pub fn sm2_encrypt<'a>(plain: &'a str, pub_key: &'a str) -> String {
-    let mut pub_hex_trim = pub_key.trim_start_matches("04");
+fn s_e<'a>(plain: &'a str, pub_key: &'a str, mode: usize) -> String {
+    let pub_hex_trim = pub_key.trim_start_matches("04");
     let pub_buf = hex::decode(pub_hex_trim.clone()).unwrap();
     let pub_key_convert = bytes_to_public_key(pub_buf);
     let plain_buf = plain.as_bytes().to_vec();
-    let cipher_buf = encrypt(pub_key_convert, plain_buf, C1C2C3);
+    let cipher_buf = encrypt(pub_key_convert, plain_buf, mode);
     hex::encode(cipher_buf)
 }
 
-pub fn sm2_decrypt<'a>(cipher: &'a str, pri_key: &'a str) -> String {
+fn s_d<'a>(cipher: &'a str, pri_key: &'a str, mode: usize) -> String {
     let sm2_p256 = Sm2P256Curve::new();
     let pri = BigUint::from_str_radix(pri_key, 16).unwrap();
     let (pkx, pky) = sm2_p256.scalar_base_mult(pri.to_bytes_be());
     let priv_g = PrivateKey{
         curve: sm2_p256.params().clone(),
         public_key: PublicKey{
-            curve: sm2_p256.params().clone(),
             x: pkx,
             y: pky,
         },
         d: pri,
     };
     let cipher_buf = hex::decode(cipher).unwrap();
-    let plain_buf = decrypt(priv_g, cipher_buf, C1C2C3);
+    let plain_buf = decrypt(priv_g, cipher_buf, mode);
     String::from_utf8_lossy(plain_buf.as_slice()).to_string()
+}
+
+pub fn sm2_encrypt<'a>(plain: &'a str, pub_key: &'a str) -> String {
+    s_e(plain, pub_key, C1C2C3)
+}
+
+pub fn sm2_decrypt<'a>(cipher: &'a str, pri_key: &'a str) -> String {
+    s_d(cipher, pri_key, C1C2C3)
+}
+
+pub fn sm2_encrypt_c1c3c2<'a>(plain: &'a str, pub_key: &'a str) -> String {
+    s_e(plain, pub_key, C1C3C2)
+}
+
+pub fn sm2_decrypt_c1c3c2<'a>(cipher: &'a str, pri_key: &'a str) -> String {
+    s_d(cipher, pri_key, C1C3C2)
 }
 
 #[cfg(test)]
@@ -65,6 +80,17 @@ mod tests {
         let plain_str = "hello world, this is sm2 test!";
         let cipher = sm2_encrypt(plain_str, &pub_hex);
         let plain = sm2_decrypt(&cipher, &pri_key);
+        assert_eq!(plain, plain_str);
+    }
+
+    #[test]
+    fn sm2_encrypt_and_decrypt_c1c3c2() {
+        let keypair = sm2_generate_key_hex();
+        let pri_key = keypair.pri_hex;
+        let pub_hex = keypair.pub_hex;
+        let plain_str = "hello world, this is sm2 test!";
+        let cipher = sm2_encrypt_c1c3c2(plain_str, &pub_hex);
+        let plain = sm2_decrypt_c1c3c2(&cipher, &pri_key);
         assert_eq!(plain, plain_str);
     }
 }

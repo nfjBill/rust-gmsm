@@ -43,7 +43,6 @@ version = "0.0.5"
 dependencies = [
  "hex",
  "lazy_static",
- "modinverse",
  "num",
  "num-bigint-dig",
  "rand",
@@ -75,15 +74,6 @@ name = "libm"
 version = "0.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c7d73b3f436185384286bd8098d17ec07c9a7d2388a6599f824d8502b529702a"
-
-[[package]]
-name = "modinverse"
-version = "0.1.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2f62f577f148cc1a9466e7065a22e59466a7d537cceba5e77e57181d0f706633"
-dependencies = [
- "num-integer",
-]
 
 [[package]]
 name = "num"

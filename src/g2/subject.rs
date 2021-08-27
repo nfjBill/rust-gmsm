@@ -1,12 +1,10 @@
 use num::{BigUint, FromPrimitive, Integer};
-use rand::Rng;
 use crate::g2::p256::{Sm2P256Curve, CurveParams, CURVE_N};
 use crate::g2::consts::*;
 use crate::g3::digest::{sm3sum, Digest};
 use crate::utils::slice::*;
 use std::ops::{Sub, Add};
 use lazy_static::lazy_static;
-use std::str::FromStr;
 
 lazy_static! {
     static ref ONE: BigUint = BigUint::from_u64(1).unwrap();
@@ -15,7 +13,6 @@ lazy_static! {
 
 #[derive(Clone)]
 pub struct PublicKey {
-    pub curve: CurveParams,
     pub x: BigUint,
     pub y: BigUint,
 }
@@ -30,7 +27,7 @@ pub struct PrivateKey {
 pub fn generate_key() -> PrivateKey {
     let c = Sm2P256Curve::new();
     let params = c.params();
-    let mut b: Vec<u8> = (0..BITSIZE / 8 + 8).map(|_| { rand::random::<u8>() }).collect();
+    let b: Vec<u8> = (0..BITSIZE / 8 + 8).map(|_| { rand::random::<u8>() }).collect();
     // fix random
     // b = hex::decode("b0e289d068d40ad9bc6118b2e000c05ae3af93c2e03980498ee18cd953383dbc8af051d598bd767d").unwrap();
     let mut k = BigUint::from_bytes_be(&b); // big order
@@ -44,7 +41,7 @@ pub fn generate_key() -> PrivateKey {
     // println!("{} {}", x, y);
     PrivateKey {
         curve: params.clone(),
-        public_key: PublicKey { curve: params.clone(), x, y },
+        public_key: PublicKey { x, y },
         d: k,
     }
 }
@@ -95,19 +92,15 @@ pub fn raw_pub_byte(public_key: PublicKey) -> Vec<u8> {
 }
 
 pub fn bytes_to_public_key(bytes: Vec<u8>) -> PublicKey {
-    let c = Sm2P256Curve::new();
-    let params = c.params();
-
     PublicKey {
-        curve: params.clone(),
         x: BigUint::from_bytes_be(&bytes[..KEYBYTES]),
         y: BigUint::from_bytes_be(&bytes[KEYBYTES..]),
     }
 }
 
 fn rand_field_element() -> BigUint {
-    let sm2_p256 = Sm2P256Curve::new();
-    let params = sm2_p256.params();
+    // let sm2_p256 = Sm2P256Curve::new();
+    // let params = sm2_p256.params();
     let b: Vec<u8> = (0..BITSIZE / 8 + 8).map(|_| { rand::random::<u8>() }).collect();
     // fix random
     // let b = hex::decode("eb8ba241ff968e1ff212ee55eed16e08cf4e4047325fe0907e8d555a4640a3e1917a6f6de2aaca17").unwrap();
@@ -144,7 +137,7 @@ fn kdf(length: usize, x: Vec<Vec<u8>>) -> (Vec<u8>, bool) {
     let mut ct = 1;
     let mut h = Digest::new();
     let mut i: usize = 0;
-    let mut j: usize = (length + 31) / 32;
+    let j: usize = (length + 31) / 32;
     while i < j {
         h.reset();
         for v in x.iter() {
@@ -182,7 +175,7 @@ pub fn encrypt(pub_key: PublicKey, data: Vec<u8>, mode: usize) -> Vec<u8> {
         let mut c: Vec<u8> = vec![];
         // let curve = sm2_p256.params().clone();
         let k = rand_field_element();
-        let (mut x1, mut y1) = sm2_p256.scalar_base_mult(k.to_bytes_be());
+        let (x1,y1) = sm2_p256.scalar_base_mult(k.to_bytes_be());
         let pub_k = pub_key.clone();
         let (x2, y2) = sm2_p256.scalar_mult(pub_k.x, pub_k.y, k.to_bytes_be());
         let mut x1buf = x1.to_bytes_be();
