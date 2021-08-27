@@ -1,6 +1,6 @@
 [package]
 name = "gmsm"
-version = "0.0.6"
+version = "0.1.0"
 edition = "2018"
 authors = ["nfjbill <nfjbill@qq.com>"]
 description = "A Rust Library of China's Standards of Encryption Algorithms (SM2/3/4)"
