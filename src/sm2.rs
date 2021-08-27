@@ -3,18 +3,27 @@ use crate::g2::subject::*;
 use crate::g2::consts::{C1C2C3, C1C3C2};
 use num::{BigUint, Num};
 
+#[derive(Clone)]
+pub struct Keypair {
+    pub pri_hex: String,
+    pub pub_hex: String,
+}
+
 pub fn sm2_generate_key() -> PrivateKey {
     generate_key()
 }
 
-pub fn sm2_generate_key_hex() -> (String, String) {
+pub fn sm2_generate_key_hex() -> Keypair {
     let pri = sm2_generate_key();
     let pub_key = pri.clone().public_key;
     let pri_buf = raw_pri_byte(pri);
     let pub_buf = raw_pub_byte(pub_key);
     let pri_hex = hex::encode(pri_buf.clone());
     let pub_hex = hex::encode(pub_buf.clone());
-    (pri_hex, pub_hex)
+    Keypair {
+        pri_hex,
+        pub_hex,
+    }
 }
 
 pub fn sm2_encrypt<'a>(plain: &'a str, pub_key: &'a str) -> String {
@@ -42,4 +51,20 @@ pub fn sm2_decrypt<'a>(cipher: &'a str, pri_key: &'a str) -> String {
     let cipher_buf = hex::decode(cipher).unwrap();
     let plain_buf = decrypt(priv_g, cipher_buf, C1C2C3);
     String::from_utf8_lossy(plain_buf.as_slice()).to_string()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn sm2_encrypt_and_decrypt() {
+        let keypair = sm2_generate_key_hex();
+        let pri_key = keypair.pri_hex;
+        let pub_hex = keypair.pub_hex;
+        let plain_str = "hello world, this is sm2 test!";
+        let cipher = sm2_encrypt(plain_str, &pub_hex);
+        let plain = sm2_decrypt(&cipher, &pri_key);
+        assert_eq!(plain, plain_str);
+    }
 }
