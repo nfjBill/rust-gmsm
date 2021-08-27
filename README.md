@@ -4,7 +4,7 @@ gmsm is an open source pure rust library of China Cryptographic Algorithm Standa
 
 ## GM/T Algorithms
 
-* SM2 (GM/T 0003-2012): elliptic curve cryptographic schemes including digital signature scheme, public key encryption, (authenticated) key exchange protocol and one recommended 256-bit prime field curve sm2p256v1.
+* SM2 (GM/T 0003-2012): elliptic curve cryptographic schemes including public key encryption, (authenticated) key exchange protocol and one recommended 256-bit prime field curve sm2p256v1.
 * SM3 (GM/T 0004-2012): cryptographic hash function with 256-bit digest length.
 * SM4 (GM/T 0002-2012): block cipher with 128-bit key length and 128-bit block size, also named SMS4.
 
