@@ -4,6 +4,7 @@ pub mod g2;
 pub mod g3;
 pub mod g4;
 
+pub mod sm2;
 pub mod sm3;
 pub mod sm4;
 

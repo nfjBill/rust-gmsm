@@ -1,5 +1,5 @@
 use crate::g3::hash::c_f;
-use crate::utils::slice::copy_slice;
+use crate::utils::slice::*;
 
 pub const SIZE: usize = 32;
 
@@ -140,4 +140,15 @@ impl Digest {
 
         return digest;
     }
+    pub fn sum(&mut self, ins: &[u8]) -> Vec<u8> {
+        let hash = self.check_sum();
+        concat_u8(&ins, &hash)
+    }
+}
+
+pub fn sm3sum(data: Vec<u8>) -> Vec<u8> {
+    let mut dst = Digest::new();
+    dst.reset();
+    dst.write(data.as_slice());
+    Vec::from(dst.check_sum())
 }

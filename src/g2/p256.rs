@@ -1,9 +1,9 @@
-use num::bigint::BigUint;
-use num_bigint_dig::{BigUint as Bi, ModInverse};
+use num::bigint::{BigUint, ToBigInt, ToBigUint};
+use num_bigint_dig::{BigUint as BigUnitDig, ModInverse};
 use std::sync::{Once};
 use std::{mem};
-use num::{Num, Integer, ToPrimitive, signum, FromPrimitive};
-use std::ops::{Shl, Shr, Add, Mul, Sub};
+use num::{Num, Integer, ToPrimitive, signum, FromPrimitive, BigInt};
+use std::ops::{Shl, Shr, Add, Mul, Sub, BitAnd, BitXor, BitXorAssign};
 use std::cmp::Ordering;
 use lazy_static::lazy_static;
 use crate::g2::consts::*;
@@ -14,17 +14,15 @@ use std::str::FromStr;
 // use crate::utils::slice::{SliceDisplay};
 
 lazy_static! {
-    static ref CURVE_A: BigUint = BigUint::from_str_radix("FFFFFFFEFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF00000000FFFFFFFFFFFFFFFC", 16).unwrap();
-    static ref CURVE_P: BigUint = BigUint::from_str_radix("FFFFFFFEFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF00000000FFFFFFFFFFFFFFFF", 16).unwrap();
-    static ref CURVE_P_BI: Bi = Bi::from_str_radix("FFFFFFFEFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF00000000FFFFFFFFFFFFFFFF", 16).unwrap();
-    static ref CURVE_N: BigUint = BigUint::from_str_radix("FFFFFFFEFFFFFFFFFFFFFFFFFFFFFFFF7203DF6B21C6052B53BBF40939D54123", 16).unwrap();
-    static ref CURVE_B: BigUint = BigUint::from_str_radix("28E9FA9E9D9F5E344D5A9E4BCF6509A7F39789F515AB8F92DDBCBD414D940E93", 16).unwrap();
-    static ref CURVE_GX: BigUint = BigUint::from_str_radix("32C4AE2C1F1981195F9904466A39C9948FE30BBFF2660BE1715A4589334C74C7", 16).unwrap();
-    static ref CURVE_GY: BigUint = BigUint::from_str_radix("BC3736A2F4F6779C59BDCEE36B692153D0A9877CC62A474002DF32E52139F0A0", 16).unwrap();
-    static ref CURVE_RINVERSE: BigUint = BigUint::from_str_radix("7ffffffd80000002fffffffe000000017ffffffe800000037ffffffc80000002", 16).unwrap();
-    static ref CURVE_RINVERSE_BI: Bi = Bi::from_str_radix("7ffffffd80000002fffffffe000000017ffffffe800000037ffffffc80000002", 16).unwrap();
+    pub static ref CURVE_A: BigUint = BigUint::from_str_radix("FFFFFFFEFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF00000000FFFFFFFFFFFFFFFC", 16).unwrap();
+    pub static ref CURVE_P: BigUint = BigUint::from_str_radix("FFFFFFFEFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF00000000FFFFFFFFFFFFFFFF", 16).unwrap();
+    pub static ref CURVE_N: BigUint = BigUint::from_str_radix("FFFFFFFEFFFFFFFFFFFFFFFFFFFFFFFF7203DF6B21C6052B53BBF40939D54123", 16).unwrap();
+    pub static ref CURVE_B: BigUint = BigUint::from_str_radix("28E9FA9E9D9F5E344D5A9E4BCF6509A7F39789F515AB8F92DDBCBD414D940E93", 16).unwrap();
+    pub static ref CURVE_GX: BigUint = BigUint::from_str_radix("32C4AE2C1F1981195F9904466A39C9948FE30BBFF2660BE1715A4589334C74C7", 16).unwrap();
+    pub static ref CURVE_GY: BigUint = BigUint::from_str_radix("BC3736A2F4F6779C59BDCEE36B692153D0A9877CC62A474002DF32E52139F0A0", 16).unwrap();
+    pub static ref CURVE_RINVERSE: BigUint = BigUint::from_str_radix("7ffffffd80000002fffffffe000000017ffffffe800000037ffffffc80000002", 16).unwrap();
 
-    static ref SM256_A: [u32; 9] = sm2p256from_big(CURVE_A.clone());
+    static ref SM256_A: [u32; 9] = sm2p256from_big(CURVE_A.clone().to_bigint().unwrap());
 }
 
 #[derive(Clone)]
@@ -49,45 +47,57 @@ pub struct Sm2P256Curve {
     pub gy: [u32; 9],
 }
 
-fn sign_num(k: BigUint) -> usize {
-    k.to_f32().unwrap().signum().to_usize().unwrap()
+fn sign_num(k: BigInt) -> isize {
+    // k.to_f32().unwrap().signum().to_usize().unwrap()
+    let z = BigInt::from(0 as u32);
+    let kr = k.cmp(&z);
+    if kr == Ordering::Greater {
+       return 1;
+    }
+    if kr == Ordering::Less {
+        return -1;
+    }
+    // if k.cmp(&z) == Ordering::Equal {
+    //     return 0;
+    // }
+    0
 }
 
 // X = a * R mod P
-fn sm2p256from_big(a: BigUint) -> [u32; 9] {
+fn sm2p256from_big(a: BigInt) -> [u32; 9] {
     let mut b: [u32; 9] = [0; 9];
     let aa = a.clone();
-    let mut x: BigUint = BigUint::shl(aa.clone(), 257);
-    x = x.mod_floor(&CURVE_P);
+    let mut x: BigInt = BigInt::shl(aa.clone(), 257);
+    x = x.mod_floor(&CURVE_P.clone().to_bigint().unwrap());
     let mut i = 0;
     while i < 9 {
-        let bits = x.to_u64_digits();
+        let bits = x.to_u64_digits().1;
         if bits.len() > 0 {
             b[i] = (bits[0] as u32) & BOTTOM29BITS;
         } else {
             b[i] = 0
         }
-        x = BigUint::shr(x, 29);
+        x = BigInt::shr(x, 29);
         i += 1;
         if i == 9 {
             break;
         }
-        let bits = x.to_u64_digits();
+        let bits = x.to_u64_digits().1;
         if bits.len() > 0 {
             b[i] = (bits[0] as u32) & BOTTOM28BITS;
         } else {
             b[i] = 0
         }
-        x = BigUint::shr(x, 28);
+        x = BigInt::shr(x, 28);
         i += 1;
     }
 
     b
 }
 
-fn sm2p256to_big(x: &mut [u32; 9]) -> BigUint {
-    let mut r: BigUint = BigUint::from_u64(x[8] as u64).unwrap();
-    let mut tm: BigUint;
+fn sm2p256to_big(x: &mut [u32; 9]) -> BigInt {
+    let mut r: BigInt = BigInt::from_u64(x[8] as u64).unwrap();
+    let mut tm: BigInt;
     let mut i: isize = 7;
     while i >= 0 {
         if (i & 1) == 0 {
@@ -95,34 +105,13 @@ fn sm2p256to_big(x: &mut [u32; 9]) -> BigUint {
         } else {
             r = r.shl(28);
         }
-        tm = BigUint::from_u64(x[i as usize] as u64).unwrap();
+        tm = BigInt::from_u64(x[i as usize] as u64).unwrap();
         r = r.add(tm);
 
         i -= 1
     }
-    r = r.mul(CURVE_RINVERSE.clone());
-    r = r.mod_floor(&CURVE_P);
-
-    r
-}
-
-fn sm2p256to_big_bi(x: &mut [u32; 9]) -> Bi {
-    let mut r: Bi = Bi::from_u64(x[8] as u64).unwrap();
-    let mut tm: Bi;
-    let mut i: isize = 7;
-    while i >= 0 {
-        if (i & 1) == 0 {
-            r = r.shl(29);
-        } else {
-            r = r.shl(28);
-        }
-        tm = Bi::from_u64(x[i as usize] as u64).unwrap();
-        r = r.add(tm);
-
-        i -= 1
-    }
-    r = r.mul(CURVE_RINVERSE_BI.clone());
-    r = r.mod_floor(&CURVE_P_BI);
+    r = r.mul(CURVE_RINVERSE.clone().to_bigint().unwrap());
+    r = r.mod_floor(&CURVE_P.clone().to_bigint().unwrap());
 
     r
 }
@@ -232,7 +221,7 @@ fn sm2p256select_jacobian_point(x_out: &mut [u32; 9], y_out: &mut [u32; 9], z_ou
         mask |= mask >> 2;
         mask |= mask >> 1;
         mask &= 1;
-        mask -= 1;
+        mask = mask.wrapping_sub(1);
 
         for j in 0..9 {
             x_out[j] |= table[i as usize][0][j] & mask;
@@ -477,13 +466,9 @@ fn sm2p256dup(b: &mut [u32; 9], a: [u32; 9]) {
     }
 }
 
-fn wnaf_reversed(wnaf: Vec<u8>) -> Vec<u8> {
-    let mut wnaf_rev: Vec<u8> = vec![];
-    let wi = wnaf.len();
-    for i in 0..wi {
-        wnaf_rev[wi - (1 + i)] = wnaf[i]
-    }
-    wnaf_rev
+fn wnaf_reversed(mut wnaf: Vec<i8>) -> Vec<i8> {
+    wnaf.reverse();
+    wnaf
 }
 
 fn bool_to_uint(b: bool) -> usize {
@@ -500,35 +485,50 @@ fn abs(a: i8) -> u32 {
     return a as u32;
 }
 
-fn sm2genrate_wnaf(b: Vec<u8>) -> Vec<u8> {
+fn sm2genrate_wnaf(b: Vec<u8>) -> Vec<i8> {
     let n: BigUint = BigUint::from_bytes_be(b.as_slice());
     let mut k: BigUint;
-    if n.cmp(&CURVE_N) == Ordering::Greater {
+    let cc = n.cmp(&CURVE_N);
+    if cc == Ordering::Equal || cc == Ordering::Greater{
         n.mod_floor(&CURVE_N);
-        k = n;
+        k = n.clone();
     } else {
-        k = n
+        k = n.clone()
     }
+    // println!("{} {} 11", k, n.clone());
 
-    let bit_len: usize = k.bits() as usize; // !!!
-    let mut wnaf: Vec<u8> = vec![0; bit_len + 1];
-    if sign_num(k.clone()) == 0 { // !!!
+    let bit_len = k.bits() as usize; // !!!
+    // println!("{}", bit_len);
+    let mut wnaf: Vec<i8> = vec![0; bit_len + 1];
+    if sign_num(k.clone().to_bigint().unwrap()) == 0 { // !!!
+        // println!("22");
         return wnaf;
     }
-    let width: usize = 4;
-    let pow2: usize = 16;
-    let sign: usize = 8;
-    let mask: u64 = 0;
+    let width: isize = 4;
+    let pow2: isize = 16;
+    let sign: isize = 8;
+    let mask: usize = 15;
     let mut carry: bool = false;
     let mut length: usize = 0;
     let mut pos: usize = 0;
     while pos <= bit_len {
-        if k.bit(pos as u64) { // !!!
+        // println!(k.bit(pos as u64));
+        // (x>>i)&1
+        // let kk = BigUint::from(pos.clone());
+        let kkk =  k.clone().shr(pos);
+        let kkkk = kkk.bitand(BigUint::from(1 as u64));
+        // let aabb = k.clone().bit(pos as u64);
+        if kkkk.to_usize().unwrap() == bool_to_uint(carry) { // !!!
             pos += 1;
             continue;
         }
         k = k.shr(pos);
-        let mut digit: usize = (k.to_u64().unwrap() & mask) as usize;
+        // println!("{} {}", pos, k);
+        let mb = BigUint::from(mask);
+        let kkk = k.clone().bitand(mb);
+        // let kkk = BigUint::from(mask);
+        let mut digit: isize = kkk.to_isize().unwrap();
+        // println!("{} {}", digit, pos);
         if carry {
             digit += 1;
         }
@@ -537,18 +537,89 @@ fn sm2genrate_wnaf(b: Vec<u8>) -> Vec<u8> {
             digit -= pow2;
         }
         length += pos;
-        wnaf[length] = digit as u8;
-        pos = width;
+        wnaf[length] = digit as i8;
+        pos = width as usize;
     }
+    // let ii = 0 - 2;
+    // println!("{:?}", wnaf);
 
     if wnaf.len() > length + 1 {
-        let mut t: Vec<u8> = vec![0; length + 1];
-        copy_slice(&mut t, &wnaf[0..(length + 1)]);
+        let mut t: Vec<i8> = vec![0; length + 1];
+        // copy_slice(&mut t, &wnaf[0..(length + 1)]);
+        copy_slice_i8(&mut t, &wnaf[0..(length + 1)]);
         wnaf = t
     }
 
+    // println!("{:?}", wnaf);
+
     wnaf
 }
+// fn sm2genrate_wnaf(b: Vec<u8>) -> Vec<u8> {
+//     let n: BigUint = BigUint::from_bytes_be(b.as_slice());
+//     let mut k: BigUint;
+//     let cc = n.cmp(&CURVE_N);
+//     if cc == Ordering::Equal || cc == Ordering::Greater{
+//         n.mod_floor(&CURVE_N);
+//         k = n.clone();
+//     } else {
+//         k = n.clone()
+//     }
+//     // println!("{} {} 11", k, n.clone());
+//
+//     let bit_len = k.bits() as usize; // !!!
+//     // println!("{}", bit_len);
+//     let mut wnaf: Vec<u8> = vec![0; bit_len + 1];
+//     if sign_num(k.clone()) == 0 { // !!!
+//         // println!("22");
+//         return wnaf;
+//     }
+//     let width: isize = 4;
+//     let pow2: isize = 16;
+//     let sign: isize = 8;
+//     let mask: usize = 15;
+//     let mut carry: bool = false;
+//     let mut length: usize = 0;
+//     let mut pos: usize = 0;
+//     while pos <= bit_len {
+//         // println!(k.bit(pos as u64));
+//         // (x>>i)&1
+//         // let kk = BigUint::from(pos.clone());
+//         let kkk =  k.clone().shr(pos);
+//         let kkkk = kkk.bitand(BigUint::from(1 as u64));
+//         // let aabb = k.clone().bit(pos as u64);
+//         if kkkk.to_usize().unwrap() == bool_to_uint(carry) { // !!!
+//             pos += 1;
+//             continue;
+//         }
+//         k = k.shr(pos);
+//         // println!("{} {}", pos, k);
+//         let mb = BigUint::from(mask);
+//         let kkk = k.clone().bitand(mb);
+//         // let kkk = BigUint::from(mask);
+//         let mut digit: isize = kkk.to_isize().unwrap();
+//         // println!("{} {}", digit, pos);
+//         if carry {
+//             digit += 1;
+//         }
+//         carry = (digit & sign) != 0;
+//         if carry {
+//             digit -= pow2;
+//         }
+//         length += pos;
+//         wnaf[length] = digit as u8;
+//         pos = width as usize;
+//     }
+//     let ii = 0 - 2;
+//     println!("{:?}", ii);
+//
+//     if wnaf.len() > length + 1 {
+//         let mut t: Vec<u8> = vec![0; length + 1];
+//         copy_slice(&mut t, &wnaf[0..(length + 1)]);
+//         wnaf = t
+//     }
+//
+//     wnaf
+// }
 
 fn sm2p256add(c: &mut [u32; 9], a: &mut [u32; 9], b: &mut [u32; 9]) {
     let mut carry: u32 = 0;
@@ -778,6 +849,7 @@ fn sm2p256point_add(x1: &mut [u32; 9], y1: &mut [u32; 9], z1: &mut [u32; 9], x2:
     let mut tm: [u32; 9] = [0; 9];
 
     if sign_num(sm2p256to_big(z1)) == 0 {
+        // println!("111");
         sm2p256dup(x3, *x2);
         sm2p256dup(y3, *y2);
         sm2p256dup(z3, *z2);
@@ -785,13 +857,16 @@ fn sm2p256point_add(x1: &mut [u32; 9], y1: &mut [u32; 9], z1: &mut [u32; 9], x2:
     }
 
     if sign_num(sm2p256to_big(z2)) == 0 {
+        // println!("222");
         sm2p256dup(x3, *x1);
         sm2p256dup(y3, *y1);
         sm2p256dup(z3, *z1);
         return;
     }
 
+    // println!("111");
     sm2p256square(&mut z12, z1);
+    // println!("11");
     sm2p256square(&mut z22, z2);
 
     sm2p256mul(&mut z13, &mut z12, z1);
@@ -848,10 +923,12 @@ fn sm2p256point_sub(x1: &mut [u32; 9], y1: &mut [u32; 9], z1: &mut [u32; 9], x2:
     let mut r2: [u32; 9] = [0; 9];
     let mut tm: [u32; 9] = [0; 9];
 
-    let mut y = sm2p256to_big(y2);
-    let mut zero = BigUint::from_u64(0).unwrap();
+    let mut y = sm2p256to_big(y2).to_bigint().unwrap();
+    let mut zero = BigInt::from_u64(0).unwrap();
     zero = zero.sub(y.clone());
-    y = y.sub(zero);
+    // println!("{} {}", zero, y);
+    y = zero;
+    // println!("{}", y);
     let yy = sm2p256from_big(y);
     for i in 0..9 {
         y2[i] = yy[i]
@@ -1097,7 +1174,7 @@ fn sm2p256point_to_affine(x_out: &mut [u32; 9], y_out: &mut [u32; 9], x: &mut [u
     let mut z_inv: [u32; 9] = [0; 9];
     let mut z_inv_sq: [u32; 9] = [0; 9];
 
-    let mut zzz = z.clone();
+    // let mut zzz = z.clone();
     let mut zz = sm2p256to_big(z);
     // let zz2 = zz;
     // let zz3 = CURVE_N.clone();
@@ -1105,11 +1182,15 @@ fn sm2p256point_to_affine(x_out: &mut [u32; 9], y_out: &mut [u32; 9], x: &mut [u
     // println!("{} 1", zz);
     // let bbb = hex::decode("104403759721252389636733147996521724073398695139720300428379110454059678713304").unwrap();
     // zz.ModInverse(zz, sm2P256.P)
-    let bbb = sm2p256to_big_bi(&mut zzz);
-    let aaa = bbb.mod_inverse(CURVE_P_BI.clone()).unwrap();
-    // println!("{} 1", aaa);
+    // let bbb = sm2p256to_big_bi(&mut zzz);
+    let zz_b_str = zz.to_string();
+    let p_b_str = CURVE_P.to_string();
+    let bi_zz_str = BigUnitDig::from_str(&zz_b_str).unwrap();
+    let bi_p_str = BigUnitDig::from_str(&p_b_str).unwrap();
+    let iv = bi_zz_str.mod_inverse(bi_p_str).unwrap();
+    // println!("{} 1", iv);
 
-    zz = BigUint::from_str(&aaa.to_string()).unwrap(); // big order
+    zz = BigInt::from_str(&iv.to_string()).unwrap(); // big order
     // println!("{} 1", zz);
     // zz = BigUint::from_str("104403759721252389636733147996521724073398695139720300428379110454059678713304").unwrap();
 
@@ -1133,10 +1214,10 @@ fn sm2p256to_affine(x: &mut [u32; 9], y: &mut [u32; 9], z: &mut [u32; 9]) -> (Bi
 
     sm2p256point_to_affine(&mut xx, &mut yy, x, y, z);
     // println!("{:?} {:?} {:?} {:?} {:?}", xx, yy, x, y, z);
-    (sm2p256to_big(&mut xx), sm2p256to_big(&mut yy))
+    (sm2p256to_big(&mut xx).to_biguint().unwrap(), sm2p256to_big(&mut yy).to_biguint().unwrap())
 }
 
-fn sm2p256scalar_mult(x_out: &mut [u32; 9], y_out: &mut [u32; 9], z_out: &mut [u32; 9], x: &mut [u32; 9], y: &mut [u32; 9], scalar: Vec<u8>) {
+fn sm2p256scalar_mult(x_out: &mut [u32; 9], y_out: &mut [u32; 9], z_out: &mut [u32; 9], x: &mut [u32; 9], y: &mut [u32; 9], scalar: Vec<i8>) {
     let mut precomp: [[[u32; 9]; 3]; 16] = [[[0; 9]; 3]; 16];
     let mut px: [u32; 9] = [0; 9];
     let mut py: [u32; 9] = [0; 9];
@@ -1164,11 +1245,11 @@ fn sm2p256scalar_mult(x_out: &mut [u32; 9], y_out: &mut [u32; 9], z_out: &mut [u
         let mut p6 = precomp[i / 2][2].clone();
         sm2p256point_double(&mut p1, &mut p2, &mut p3, &mut p4, &mut p5, &mut p6);
         precomp[i][0] = p1;
-        precomp[i][1] = p1;
-        precomp[i][2] = p1;
-        precomp[i / 2][0] = p1;
-        precomp[i / 2][1] = p1;
-        precomp[i / 2][2] = p1;
+        precomp[i][1] = p2;
+        precomp[i][2] = p3;
+        precomp[i / 2][0] = p4;
+        precomp[i / 2][1] = p5;
+        precomp[i / 2][2] = p6;
 
         p1 = precomp[i + 1][0].clone();
         p2 = precomp[i + 1][1].clone();
@@ -1187,6 +1268,8 @@ fn sm2p256scalar_mult(x_out: &mut [u32; 9], y_out: &mut [u32; 9], z_out: &mut [u
         i += 2;
     }
 
+    // println!("{:?}", precomp);
+
     for j in 0..9 {
         x_out[j] = 0;
         y_out[j] = 0;
@@ -1196,29 +1279,41 @@ fn sm2p256scalar_mult(x_out: &mut [u32; 9], y_out: &mut [u32; 9], z_out: &mut [u
     n_is_infinity_mask = !(0 as u32);
     let mut zeroes: u16 = 0;
     let lc = scalar.len();
-    while i < lc {
+    // println!("{:?} {}", scalar, lc);
+    let mut j: isize = -1;
+    while j < (lc - 1) as isize {
+        j += 1;
+        i = j as usize;
         if scalar[i] == 0 {
             zeroes += 1;
+            // println!("{} {} {}", i, scalar[i], zeroes);
             continue;
         }
 
-        if zeroes > 0 {
-            while zeroes > 0 {
-                sm2p256point_double(x_out, y_out, z_out, &mut x_out.clone(), &mut y_out.clone(), &mut z_out.clone());
-                zeroes -= 1;
-            }
+        while zeroes > 0 {
+            sm2p256point_double(x_out, y_out, z_out, &mut x_out.clone(), &mut y_out.clone(), &mut z_out.clone());
+            zeroes -= 1;
         }
 
-        index = ((scalar[i] as f32).abs()) as u32;
+        index = (scalar[i].abs()) as u32;
+        // println!("{} 11", index);
         sm2p256point_double(x_out, y_out, z_out, &mut x_out.clone(), &mut y_out.clone(), &mut z_out.clone());
+
+        // println!("{} 22", index);
         sm2p256select_jacobian_point(&mut px, &mut py, &mut pz, precomp, index);
 
+        // println!("222");
         if scalar[i] > 0 {
+            // println!("{:?} {:?} {:?} {:?} {:?} {:?} {:?} {:?} {:?}", x_out, y_out, z_out, px, py, pz, tx, ty, tz);
+            // println!("======1");
             sm2p256point_add(x_out, y_out, z_out, &mut px, &mut py, &mut pz, &mut tx, &mut ty, &mut tz);
+            // println!("======2");
+            // println!("{:?} {:?} {:?} {:?} {:?} {:?} {:?} {:?} {:?}", x_out, y_out, z_out, px, py, pz, tx, ty, tz);
         } else {
-            sm2p256point_add(x_out, y_out, z_out, &mut px, &mut py, &mut pz, &mut tx, &mut ty, &mut tz);
+            sm2p256point_sub(x_out, y_out, z_out, &mut px, &mut py, &mut pz, &mut tx, &mut ty, &mut tz);
         }
 
+        // println!("333");
         sm2p256copy_conditional(x_out, px, n_is_infinity_mask);
         sm2p256copy_conditional(y_out, py, n_is_infinity_mask);
         sm2p256copy_conditional(z_out, pz, n_is_infinity_mask);
@@ -1228,9 +1323,8 @@ fn sm2p256scalar_mult(x_out: &mut [u32; 9], y_out: &mut [u32; 9], z_out: &mut [u
         sm2p256copy_conditional(y_out, ty, mask);
         sm2p256copy_conditional(z_out, tz, mask);
         n_is_infinity_mask &= !(p_is_noninfinite_mask.clone());
-
-        i += 1;
     }
+
 
     if zeroes > 0 {
         while zeroes > 0 {
@@ -1263,9 +1357,9 @@ impl Sm2P256Curve {
                     gy: [0; 9],
                 };
                 sm2_crv.a = SM256_A.clone();
-                sm2_crv.gx = sm2p256from_big(sm2_crv.curve.gx.clone());
-                sm2_crv.gy = sm2p256from_big(sm2_crv.curve.gy.clone());
-                sm2_crv.b = sm2p256from_big(sm2_crv.curve.b.clone());
+                sm2_crv.gx = sm2p256from_big(sm2_crv.curve.gx.clone().to_bigint().unwrap());
+                sm2_crv.gy = sm2p256from_big(sm2_crv.curve.gy.clone().to_bigint().unwrap());
+                sm2_crv.b = sm2p256from_big(sm2_crv.curve.b.clone().to_bigint().unwrap());
                 CURVE = mem::transmute(Box::new(sm2_crv));
             });
             (*CURVE).clone()
@@ -1290,6 +1384,26 @@ impl Sm2P256Curve {
         // println!("{:?}", y);
         // println!("{:?}", z);
         // println!("{:?}", scalar_reversed);
+        sm2p256to_affine(&mut x, &mut y, &mut z)
+    }
+
+    pub fn scalar_mult(&self, x1: BigUint, y1: BigUint, k: Vec<u8>) -> (BigUint, BigUint) {
+        let mut x: [u32; 9] = [0; 9];
+        let mut y: [u32; 9] = [0; 9];
+        let mut z: [u32; 9] = [0; 9];
+        let mut xx1: [u32; 9] = [0; 9];
+        let mut yy1: [u32; 9] = [0; 9];
+
+        // println!("{} {}", x1, y1);
+        xx1 = sm2p256from_big(x1.to_bigint().unwrap());
+        yy1 = sm2p256from_big(y1.to_bigint().unwrap());
+        // println!("{:?} {:?} {:?}", xx1, yy1, k);
+        let scalar = sm2genrate_wnaf(k);
+        // println!("{:?}", scalar);
+        let scalar_reversed = wnaf_reversed(scalar);
+        // println!("{:?} {:?} {:?} {:?} {:?} {:?} 1", x.clone(), y.clone(), z.clone(), xx1.clone(), yy1.clone(), scalar_reversed.clone());
+        sm2p256scalar_mult(&mut x, &mut y, &mut z, &mut xx1, &mut yy1, scalar_reversed.clone());
+        // println!("{:?} {:?} {:?} {:?} {:?} {:?} 2", x.clone(), y.clone(), z.clone(), xx1.clone(), yy1.clone(), scalar_reversed.clone());
         sm2p256to_affine(&mut x, &mut y, &mut z)
     }
 }

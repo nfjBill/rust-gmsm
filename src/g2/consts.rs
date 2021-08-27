@@ -3,6 +3,9 @@ pub const BOTTOM29BITS: u32 = 0x1FFFFFFF;
 pub const BITSIZE: usize = 256;
 pub const KEYBYTES: usize = (BITSIZE + 7) / 8;
 pub const UNCOMPRESS: u8 = 0x04;
+pub const DEFAULT_UID: [u8; 16] = [0x31, 0x32, 0x33, 0x34, 0x35, 0x36, 0x37, 0x38, 0x31, 0x32, 0x33, 0x34, 0x35, 0x36, 0x37, 0x38];
+pub const C1C3C2: usize = 0;
+pub const C1C2C3: usize = 1;
 
 // 9 * 2 * 15 * 2 = 540
 pub const SM2P256PRECOMPUTED: [u32; 540] = [

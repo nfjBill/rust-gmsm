@@ -25,3 +25,16 @@ pub fn copy_slice(dst: &mut [u8], src: &[u8]) -> usize {
     }
     c
 }
+
+pub fn copy_slice_i8(dst: &mut [i8], src: &[i8]) -> usize {
+    let mut c = 0;
+    for (d, s) in dst.iter_mut().zip(src.iter()) {
+        *d = *s;
+        c += 1;
+    }
+    c
+}
+
+pub fn concat_u8(first: &[u8], second: &[u8]) -> Vec<u8> {
+    [first, second].concat()
+}
